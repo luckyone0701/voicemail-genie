@@ -1,66 +1,113 @@
-name: Android Release CI
+name: Android - Build & Upload AAB
 
 on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play Store track (internal, alpha, beta, production)'
+        required: false
+        default: 'internal'
   push:
     branches:
       - main
-    tags:
-      - 'v*'
+
+env:
+  # relative path to your Android project (change if your android project is somewhere else)
+  ANDROID_DIR: ${{ secrets.ANDROID_MODULE_PATH || 'android' }}
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
 
 jobs:
   build-and-upload:
+    name: Build & Upload AAB
     runs-on: ubuntu-latest
-    env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/.gradle
+    timeout-minutes: 60
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+    - name: Set up Java (11 recommended for most Android Gradle versions)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '11'
 
-      - name: Install Android SDK components
-        uses: android-actions/setup-android@v2
-        with:
-          api-level: 31
-          build-tools: '31.0.0'
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          ${{ env.GRADLE_USER_HOME }}
+        key: gradle-cache-${{ runner.os }}-${{ hashFiles('**/gradle/wrapper/**', '**/*.gradle*', '**/gradle.properties') }}
+        restore-keys: |
+          gradle-cache-${{ runner.os }}-
 
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ./keystore.jks
+    - name: Install dependencies & make gradlew executable
+      run: |
+        if [ -f "${{ env.ANDROID_DIR }}/gradlew" ]; then chmod +x "${{ env.ANDROID_DIR }}/gradlew"; fi
+        # Show JDK and Gradle info
+        java -version || true
+        uname -a || true
 
-      - name: Write Play JSON key
-        run: |
-          echo "${{ secrets.PLAY_STORE_JSON_KEY }}" | base64 --decode > ./android/fastlane/fastlane_service_account.json
+    - name: Decode Android keystore (from secret)
+      env:
+        KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      run: |
+        if [ -z "$KEYSTORE_B64" ]; then echo "No keystore provided (ANDROID_KEYSTORE_BASE64 is empty)"; exit 1; fi
+        mkdir -p ${{ env.ANDROID_DIR }}/keystore
+        echo "$KEYSTORE_B64" | base64 --decode > "${{ env.ANDROID_DIR }}/keystore/keystore.jks"
+        ls -la "${{ env.ANDROID_DIR }}/keystore"
 
-      - name: Install Bundler & Fastlane
-        run: |
-          gem install bundler
-          bundle init || true
-          bundle config set --local path vendor/bundle || true
-          bundle install || true
-          gem install fastlane
+    - name: Create gradle.properties with signing config
+      run: |
+        cat > "${{ env.ANDROID_DIR }}/gradle.properties" <<EOF
+ORG_GRADLE_PROJECT_keystoreFile=${{ env.ANDROID_DIR }}/keystore/keystore.jks
+ORG_GRADLE_PROJECT_keystorePassword=${{ secrets.KEYSTORE_PASSWORD }}
+ORG_GRADLE_PROJECT_keyAlias=${{ secrets.KEY_ALIAS }}
+ORG_GRADLE_PROJECT_keyPassword=${{ secrets.KEY_PASSWORD }}
+EOF
+      # NOTE: your build.gradle / signing config should use project properties:
+      # storeFile file(keystoreFile), storePassword keystorePassword, keyAlias keyAlias, keyPassword keyPassword
 
-      - name: Install Node deps
-        run: npm ci
+    - name: Build Android AAB (bundleRelease)
+      working-directory: ${{ env.ANDROID_DIR }}
+      run: |
+        # optional: show gradle wrapper
+        ./gradlew --no-daemon --version
+        # clean & build the release bundle. Adjust task if your module name differs
+        ./gradlew --no-daemon clean bundleRelease
 
-      - name: Build AAB (Gradle)
-        env:
-          KEYSTORE_FILE: ./keystore.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          cd android
-          ./gradlew clean bundleRelease --no-daemon
+    - name: Find generated AAB
+      run: |
+        set -e
+        # typical path: android/app/build/outputs/bundle/release/app-release.aab
+        AAB=$(find "${{ env.ANDROID_DIR }}" -type f -name "*.aab" -print -quit || true)
+        if [ -z "$AAB" ]; then
+          echo "No AAB found in ${GITHUB_WORKSPACE}/${{ env.ANDROID_DIR }}"; ls -R "${{ env.ANDROID_DIR }}" || true; exit 1
+        fi
+        echo "AAB: $AAB"
+        echo "aab_path=$AAB" >> "$GITHUB_OUTPUT"
 
-      - name: Fastlane upload to internal track
-        env:
-          PLAY_STORE_JSON_KEY: ./android/fastlane/fastlane_service_account.json
-        run: |
-          cd android
-          bundle exec fastlane internal
+    - name: Upload AAB to Google Play (internal by default)
+      uses: r0adkll/upload-google-play@v1
+      with:
+        serviceAccountJsonPlainText: ${{ secrets.PLAYSTORE_SERVICE_ACCOUNT_JSON }}
+        packageName: com.yourcompany.yourapp # <-- CHANGE to your app id (e.g. com.company.app)
+        releaseFiles: ${{ steps.find.outputs.aab_path || steps.find.outputs.aab_path }} # aab path from previous step
+        track: ${{ github.event.inputs.track || github.event.release?.tag_name || 'internal' }}
+        # track: internal / alpha / beta / production
+      env:
+        # ensure JAVA_HOME still present
+        JAVA_HOME: ${{ env.JAVA_HOME }}
+
+    # Optional: Use fastlane supply (Alternative uploader)
+    # - name: Install fastlane and upload with supply
+    #   if: false
+    #   run: |
+    #     gem install fastlane
+    #     export FASTLANE_USER="you@example.com"
+    #     cd ${{ env.ANDROID_DIR }}
+    #     fastlane supply --json_key <(echo "${{ secrets.PLAYSTORE_SERVICE_ACCOUNT_JSON }}") --package_name com.yourcompany.yourapp --track internal --aab app/build/outputs/bundle/release/app-release.aab
