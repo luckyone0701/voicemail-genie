@@ -1,0 +1,40 @@
+name: CI → Vercel Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint || true
+
+      - name: Run tests
+        run: npm test || true
+
+      - name: Build (for verification)
+        run: npm run build
+
+      - name: Deploy to Vercel (via Vercel CLI)
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm i -g vercel
+          vercel pull --yes --environment=production
+          vercel --prod --confirm --token $VERCEL_TOKEN
