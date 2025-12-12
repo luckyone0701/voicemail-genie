@@ -1,2 +1,0 @@
-json_key_file("./fastlane_service_account.json")
-package_name("com.yourcompany.voicemailgenie") # <- change this to your Android package name
