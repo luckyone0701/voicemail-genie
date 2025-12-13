@@ -2,37 +2,3 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-model Payment {
-  id              String         @id @default(cuid())
-  userId          String?
-  amount          Int
-  cashTag         String
-  referenceCode   String
-  status          PaymentStatus  @default(PENDING)
-  verified        Boolean        @default(false)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  EXPIRED
-  FAILED
-}
-
-model PaymentLog {
-  id            String   @id @default(cuid())
-  amount        Int
-  currency      String   @default("USD")
-  status        String
-  cashAppId     String?
-  rawResponse   Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
