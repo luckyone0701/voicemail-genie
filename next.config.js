@@ -1,13 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+
   experimental: {
-    serverActions: {},
+    serverActions: {}, // MUST be an object
   },
 
-  // Silence Turbopack vs webpack conflict
-  turbopack: {},
+  // Force Webpack (disable Turbopack for now)
+  webpack: (config) => {
+    return config;
+  },
 
-  // REMOVE any custom webpack config unless absolutely required
+  // Silence Turbopack warning
+  turbopack: {},
 };
 
 module.exports = nextConfig;
