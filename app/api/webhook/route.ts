@@ -1,8 +1,10 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
 
+export const runtime = "nodejs";
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-04-10",
+  apiVersion: "2023-10-16",
 });
 
 export async function POST(req: Request) {
@@ -13,15 +15,17 @@ export async function POST(req: Request) {
     return new Response("Missing signature", { status: 400 });
   }
 
+  let event: Stripe.Event;
+
   try {
-    const event = stripe.webhooks.constructEvent(
+    event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-
-    return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (err: any) {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
+
+  return new Response("ok", { status: 200 });
 }
