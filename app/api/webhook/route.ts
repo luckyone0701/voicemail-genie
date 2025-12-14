@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -9,21 +10,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const sig = headers().get("stripe-signature");
+  const signature = headers().get("stripe-signature");
 
-  if (!sig) {
-    return new Response("Missing signature", { status: 400 });
+  if (!signature) {
+    return new NextResponse("Missing signature", { status: 400 });
   }
+
+  let event: Stripe.Event;
 
   try {
-    const event = stripe.webhooks.constructEvent(
+    event = stripe.webhooks.constructEvent(
       body,
-      sig,
+      signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-
-    return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (err) {
-    return new Response("Webhook error", { status: 400 });
+    return new NextResponse("Webhook error", { status: 400 });
   }
+
+  return NextResponse.json({ received: true });
 }
