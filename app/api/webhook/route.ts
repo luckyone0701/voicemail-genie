@@ -1,19 +1,29 @@
 import Stripe from "stripe";
-import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
+
+export const runtime = "nodejs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-04-10",
+  apiVersion: "2023-10-16",
 });
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const body = await req.text();
-  const sig = req.headers.get("stripe-signature");
+  const sig = headers().get("stripe-signature");
 
   if (!sig) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    return new Response("Missing signature", { status: 400 });
   }
 
-  // webhook handling logic here
+  try {
+    const event = stripe.webhooks.constructEvent(
+      body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
 
-  return NextResponse.json({ received: true });
+    return new Response(JSON.stringify({ received: true }), { status: 200 });
+  } catch (err) {
+    return new Response("Webhook error", { status: 400 });
+  }
 }
