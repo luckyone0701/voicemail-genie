@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import React, { useEffect } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 type PayWithCashAppProps = {
   amount?: number;
