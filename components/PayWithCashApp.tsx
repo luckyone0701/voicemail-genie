@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 
 type PayWithCashAppProps = {
@@ -12,12 +12,11 @@ export default function PayWithCashApp({
   amount = 4.99,
   userId,
 }: PayWithCashAppProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = React.useState(false);
 
   async function startPayment() {
     setLoading(true);
 
-    // TODO: generate Cash App payment link / QR
     alert("Cash App payment flow coming next");
 
     setLoading(false);
