@@ -1,13 +1,18 @@
-import { validateAdmin } from "@/lib/validate-admin";
+import { ReactNode } from "react";
 import Sidebar from "@/components/admin/sidebar";
+import { validateAdmin } from "@/lib/auth/validateAdmin";
 
-export default async function AdminLayout({ children }) {
-  await validateAdmin(); // redirects if not admin
+export default async function AdminLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  await validateAdmin();
 
   return (
     <div className="flex">
       <Sidebar />
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }

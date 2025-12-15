@@ -1,7 +1,14 @@
+type User = {
+  id: string;
+  email: string;
+  plan: string;
+  createdAt?: string;
+};
+
 import { apiAdmin } from "@/lib/admin-api";
 
 export default async function UsersPage() {
-  const users = await apiAdmin("users");
+  const users: User[] = await apiAdmin("users");
 
   return (
     <div>
@@ -16,11 +23,11 @@ export default async function UsersPage() {
           </tr>
         </thead>
         <tbody>
-          {users.map(u => (
+          {users.map((u: User) => (
             <tr key={u.id}>
               <td className="border p-2">{u.email}</td>
               <td className="border p-2">{u.plan}</td>
-              <td className="border p-2">{u.createdAt}</td>
+              <td className="border p-2">{u.createdAt ?? "-"}</td>
             </tr>
           ))}
         </tbody>
