@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "postinstall": "prisma generate"
+  "build": "cross-env NEXT_DISABLE_TURBOPACK=1 next build",
+  "start": "next start",
+  "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
