@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const order = await prisma.voicemailOrder.create({
       data: {
         email: body.email,
-        name: body.name,
+        displayName: body.name,
         script: body.script,
         audioUrl: body.audioUrl,
         paymentMethod: body.paymentMethod ?? "cashapp",
