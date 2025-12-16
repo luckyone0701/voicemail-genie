@@ -1,8 +1,13 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 model VoicemailOrder {
-  id             String   @id @default(uuid())
-  email          String
-  name           String
-  script         String
-  audioUrl       String?
-  paymentMethod  String?
+  id            String   @id @default(cuid())
+  email         String
+  displayName   String
+  script        String
+  audioUrl      String?
+  paymentMethod String
+  createdAt     DateTime @default(now())
 }
