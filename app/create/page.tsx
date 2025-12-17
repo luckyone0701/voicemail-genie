@@ -1,10 +1,12 @@
-<Button
-  onClick={async () => {
-    const res = await fetch("/api/checkout", { method: "POST" });
-    const data = await res.json();
-    window.location.href = data.url;
-  }}
-  className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-lg font-semibold"
->
-  Pay $5 & Continue
-</Button>
+"use client";
+
+import React from "react";
+
+export default function CreatePage() {
+  return (
+    <main className="min-h-screen p-8">
+      <h1 className="text-3xl font-bold mb-4">Create Your Voicemail</h1>
+      <p>Preview your voicemail, then complete payment to download.</p>
+    </main>
+  );
+}
