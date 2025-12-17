@@ -3,16 +3,18 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const [orders, revenue] = await Promise.all([
-      prisma.voicemailOrder.count(),
-      prisma.voicemailOrder.aggregate({
-        _sum: { price: true },
-      }),
-    ]);
+    const orders = await prisma.voicemailOrder.findMany({
+      select: { price: true },
+    });
+
+    const totalRevenue = orders.reduce((sum, o) => {
+      const value = typeof o.price === "number" ? o.price : Number(o.price);
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0);
 
     return NextResponse.json({
-      totalOrders: orders,
-      totalRevenue: revenue._sum.price ?? 0,
+      totalOrders: orders.length,
+      totalRevenue,
     });
   } catch (error) {
     console.error("Admin stats error:", error);
