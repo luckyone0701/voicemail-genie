@@ -8,14 +8,14 @@ export async function POST(req: Request) {
     const order = await prisma.voicemailOrder.create({
       data: {
         email: body.email,
-        displayName: body.name,
+		displayName: body.displayName,
         script: body.script,
         audioUrl: body.audioUrl,
         paymentMethod: body.paymentMethod ?? "cashapp",
       },
     });
 
-    return NextResponse.json({ success: true, order });
+    return NextResponse.json(order, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
