@@ -3,24 +3,14 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const orders = await prisma.voicemailOrder.findMany({
-      select: { price: true },
-    });
-
-    const totalRevenue = orders.reduce((sum, o) => {
-      const value = typeof o.price === "number" ? o.price : Number(o.price);
-      return sum + (isNaN(value) ? 0 : value);
-    }, 0);
+    const totalOrders = await prisma.voicemailOrder.count();
 
     return NextResponse.json({
-      totalOrders: orders.length,
-      totalRevenue,
+      totalOrders,
+      totalRevenue: 0, // placeholder
     });
   } catch (error) {
-    console.error("Admin stats error:", error);
-    return NextResponse.json(
-      { error: "Failed to load admin stats" },
-      { status: 500 }
-    );
+    console.error(error);
+    return NextResponse.json({ error: "Failed to load stats" }, { status: 500 });
   }
 }
