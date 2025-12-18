@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-apiVersion: "2025-12-15.clover",
+// ⬆️ remove apiVersion entirely to avoid future type issues
 
 export async function POST() {
   try {
@@ -16,7 +16,7 @@ export async function POST() {
             product_data: {
               name: "AI Voicemail Greeting",
             },
-            unit_amount: 500,
+            unit_amount: 500, // $5.00
           },
           quantity: 1,
         },

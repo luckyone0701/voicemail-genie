@@ -1,27 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
 
   if (!id) {
-    return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  const order = await prisma.voicemailOrder.findUnique({
+  const voicemail = await prisma.voicemailOrder.findUnique({
     where: { id },
     select: { paid: true, audioUrl: true },
   });
 
-  if (!order || !order.paid) {
-    return NextResponse.json(
-      { error: "Payment required" },
-      { status: 403 }
-    );
+  if (!voicemail || !voicemail.paid) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  return NextResponse.json({ audioUrl: order.audioUrl });
+  return NextResponse.json({ audioUrl: voicemail.audioUrl });
 }
