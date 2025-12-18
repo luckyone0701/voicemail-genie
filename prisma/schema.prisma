@@ -14,5 +14,6 @@ model VoicemailOrder {
   script        String
   audioUrl      String?
   paymentMethod String
+  paid          Boolean  @default(false)
   createdAt     DateTime @default(now())
 }

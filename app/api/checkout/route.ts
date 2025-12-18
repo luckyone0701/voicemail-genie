@@ -1,35 +1,27 @@
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
+import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params;
 
-export async function POST() {
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: "AI Voicemail Greeting",
-            },
-            unit_amount: 500, // $5.00
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/create?paid=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/`,
-    });
+  const order = await prisma.voicemailOrder.findUnique({
+    where: { id },
+    select: {
+      audioUrl: true,
+      // add this once you add paid flag
+      paid: true,
+    },
+  });
 
-    return NextResponse.json({ url: session.url });
-  } catch (err) {
-    console.error("Stripe checkout error:", err);
+  if (!order || !order.paid) {
     return NextResponse.json(
-      { error: "Unable to create checkout session" },
-      { status: 500 }
+      { error: "Payment required" },
+      { status: 403 }
     );
   }
+
+  return NextResponse.json({ audioUrl: order.audioUrl });
 }
