@@ -2,15 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  try {
-    const totalOrders = await prisma.voicemailOrder.count();
+  const orders = await prisma.voicemailOrder.findMany({
+    where: { paid: true },
+  });
 
-    return NextResponse.json({
-      totalOrders,
-      totalRevenue: 0, // placeholder
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Failed to load stats" }, { status: 500 });
-  }
+  const totalRevenue = orders.length * 5; // $5 per order
+
+  return NextResponse.json({
+    totalOrders: orders.length,
+    totalRevenue,
+  });
 }

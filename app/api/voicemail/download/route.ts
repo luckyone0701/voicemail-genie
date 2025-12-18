@@ -1,24 +1,27 @@
-// app/api/voicemail/download/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params;
 
   if (!id) {
-    return new NextResponse("Missing id", { status: 400 });
+    return NextResponse.json({ error: "Missing ID" }, { status: 400 });
   }
 
-  const voicemail = await prisma.voicemail.findUnique({
+  const order = await prisma.voicemailOrder.findUnique({
     where: { id },
     select: { paid: true, audioUrl: true },
   });
 
-  if (!voicemail || !voicemail.paid) {
-    return new NextResponse("Payment required", { status: 402 });
+  if (!order || !order.paid) {
+    return NextResponse.json(
+      { error: "Payment required" },
+      { status: 403 }
+    );
   }
 
-  // Redirect to signed S3 / storage URL
-  return NextResponse.redirect(voicemail.audioUrl);
+  return NextResponse.json({ audioUrl: order.audioUrl });
 }
