@@ -1,148 +1,165 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { TONES, ToneId } from "@/app/lib/tones";
 
-type Voice = "female" | "male";
-type PauseStyle = "natural" | "crisp";
+type ToneId =
+  | "professional"
+  | "friendly"
+  | "funny"
+  | "calm"
+  | "urgent"
+  | "robot"
+  | "ghost"
+  | "deep"
+  | "cheerful"
+  | "dramatic";
+
+const TONES: { id: ToneId; label: string }[] = [
+  { id: "professional", label: "Professional" },
+  { id: "friendly", label: "Friendly" },
+  { id: "funny", label: "Funny" },
+  { id: "calm", label: "Calm" },
+  { id: "urgent", label: "Urgent" },
+  { id: "robot", label: "🤖 Robot" },
+  { id: "ghost", label: "👻 Ghost" },
+  { id: "deep", label: "🎙️ Deep Voice" },
+  { id: "cheerful", label: "😊 Cheerful" },
+  { id: "dramatic", label: "🎭 Dramatic" },
+];
 
 export default function CreatePage() {
-  const [notes, setNotes] = useState("");
+  const [script, setScript] = useState("");
   const [tone, setTone] = useState<ToneId>("professional");
-  const [voice, setVoice] = useState<Voice>("female");
-  const [speed, setSpeed] = useState(1.15);
-  const [pauseStyle, setPauseStyle] = useState<PauseStyle>("natural");
-
+  const [speed, setSpeed] = useState(1);
+  const [pause, setPause] = useState(300);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   async function generatePreview() {
     setLoading(true);
-    setAudioUrl(null);
 
-    const res = await fetch("/api/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        notes,
-        tone,
-        voice,
-        speed,
-        pauseStyle,
-      }),
-    });
-
-    const data = await res.json();
-    setAudioUrl(data.audioUrl);
-    setLoading(false);
+    // TEMP preview stub — replace with real API later
+    setTimeout(() => {
+      setPreviewUrl("/sample-preview.mp3");
+      setLoading(false);
+    }, 1200);
   }
 
-  async function payAndDownload() {
+  async function startCheckout() {
     const res = await fetch("/api/checkout", { method: "POST" });
     const data = await res.json();
     window.location.href = data.url;
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <Card className="w-full max-w-xl bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
-        <h1 className="text-2xl font-bold text-center">
-          Create Voicemail Preview
-        </h1>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-600 to-indigo-800 text-white p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-3xl mx-auto mt-20 space-y-10"
+      >
+        <header className="text-center space-y-2">
+          <h1 className="text-4xl font-extrabold">Create Your Voicemail</h1>
+          <p className="opacity-90">
+            Preview your voicemail, then complete payment to download.
+          </p>
+        </header>
 
-        {/* TEXT INPUT */}
-        <Textarea
-          placeholder="Hi, you've reached Randy. Please leave a message after the tone."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={4}
-        />
-
-        {/* VOICE */}
-        <div className="flex justify-center gap-3">
-          {(["female", "male"] as Voice[]).map((v) => (
-            <Button
-              key={v}
-              variant={voice === v ? "default" : "outline"}
-              onClick={() => setVoice(v)}
-            >
-              {v === "female" ? "Female" : "Male"}
-            </Button>
-          ))}
+        {/* Script */}
+        <div>
+          <label className="block font-semibold mb-2">Voicemail Script</label>
+          <textarea
+            value={script}
+            onChange={(e) => setScript(e.target.value)}
+            placeholder="Hi, you’ve reached..."
+            className="w-full min-h-[140px] rounded-xl p-4
+                       bg-black text-white border border-white/20
+                       focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          />
         </div>
 
-        {/* TONES */}
-        <div className="flex justify-center gap-2 flex-wrap">
-          {TONES.map((t) => (
-            <Button
-              key={t.id}
-              variant={tone === t.id ? "default" : "outline"}
-              onClick={() => setTone(t.id)}
-            >
-              {t.label}
-            </Button>
-          ))}
+        {/* Tone */}
+        <div>
+          <label className="block font-semibold mb-3">Tone</label>
+          <div className="flex flex-wrap gap-3">
+            {TONES.map((t) => {
+              const active = tone === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTone(t.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition
+                    ${
+                      active
+                        ? "bg-yellow-400 text-black shadow"
+                        : "bg-white/10 hover:bg-white/20"
+                    }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* SPEED */}
-        <div className="text-center space-y-2">
-          <label className="text-sm opacity-80">
+        {/* Speed */}
+        <div>
+          <label className="block font-semibold mb-2">
             Speech Speed: {speed.toFixed(2)}x
           </label>
           <input
             type="range"
-            min="0.9"
-            max="1.3"
+            min="0.75"
+            max="1.25"
             step="0.05"
             value={speed}
-            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+            onChange={(e) => setSpeed(Number(e.target.value))}
             className="w-full"
           />
         </div>
 
-        {/* PAUSES */}
-        <div className="flex justify-center gap-3">
-          <Button
-            variant={pauseStyle === "natural" ? "default" : "outline"}
-            onClick={() => setPauseStyle("natural")}
-          >
-            Natural Pauses
-          </Button>
-          <Button
-            variant={pauseStyle === "crisp" ? "default" : "outline"}
-            onClick={() => setPauseStyle("crisp")}
-          >
-            Crisp / No Gaps
-          </Button>
+        {/* Pause */}
+        <div>
+          <label className="block font-semibold mb-2">
+            Pause Between Sentences: {pause}ms
+          </label>
+          <input
+            type="range"
+            min="100"
+            max="800"
+            step="50"
+            value={pause}
+            onChange={(e) => setPause(Number(e.target.value))}
+            className="w-full"
+          />
         </div>
 
-        {/* GENERATE */}
-        <Button
-          disabled={!notes || loading}
-          onClick={generatePreview}
-          className="w-full"
-        >
-          {loading ? "Generating…" : "Generate 15s Preview"}
-        </Button>
+        {/* Preview + Pay */}
+        <div className="text-center space-y-5">
+          <Button
+            onClick={generatePreview}
+            disabled={!script || loading}
+            className="bg-yellow-400 text-black font-bold px-8 py-4 rounded-xl shadow-xl hover:bg-yellow-300"
+          >
+            {loading ? "Generating Preview…" : "Generate Free Preview"}
+          </Button>
 
-        {/* AUDIO */}
-        {audioUrl && (
-          <audio controls className="w-full">
-            <source src={audioUrl} type="audio/mpeg" />
-          </audio>
-        )}
+          {previewUrl && (
+            <>
+              <audio controls src={previewUrl} className="w-full mt-4" />
 
-        {/* PAY */}
-        <Button
-          onClick={payAndDownload}
-          className="w-full bg-yellow-400 text-black hover:bg-yellow-300"
-        >
-          Pay $5 & Download
-        </Button>
-      </Card>
+              <Button
+                onClick={startCheckout}
+                className="bg-indigo-900 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-indigo-950"
+              >
+                Pay $5 & Download
+              </Button>
+            </>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,17 +1,34 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/app/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  const order = await prisma.voicemailOrder.findUnique({
-    where: { id: params.id },
-  });
+  try {
+    const { id } = await context.params;
 
-  if (!order || !order.paid) {
-    return NextResponse.json({ error: "Not paid" }, { status: 403 });
+    if (!id) {
+      return NextResponse.json(
+        { error: "Missing voicemail id" },
+        { status: 400 }
+      );
+    }
+
+    /**
+     * TODO:
+     * Replace this with your real lookup:
+     *  - database
+     *  - S3
+     *  - signed URL
+     */
+    const audioUrl = `/generated/${id}.mp3`;
+
+    return NextResponse.json({ audioUrl });
+  } catch (err) {
+    console.error("Download error:", err);
+    return NextResponse.json(
+      { error: "Failed to fetch audio" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ audioUrl: order.audioUrl });
 }

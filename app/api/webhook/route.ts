@@ -5,15 +5,9 @@ import path from "path";
 import crypto from "crypto";
 import OpenAI from "openai";
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-04-10",
-});
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
