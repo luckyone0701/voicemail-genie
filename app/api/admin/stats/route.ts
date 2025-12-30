@@ -1,3 +1,4 @@
+// app/api/admin/stats/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -6,10 +7,10 @@ export async function GET() {
     where: { paid: true },
   });
 
-  const totalRevenue = orders.length * 5; // $5 per order
+  const totalRevenue = orders.length * 5;
 
   return NextResponse.json({
-    totalOrders: orders.length,
+    orders: orders.length,
     totalRevenue,
   });
 }
