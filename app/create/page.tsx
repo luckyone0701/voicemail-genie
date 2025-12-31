@@ -11,11 +11,12 @@ const TONES = [
   { id: "angry", label: "😡 Angry" },
   { id: "ghost", label: "👻 Ghost" },
   { id: "robot", label: "🤖 Robot" },
-];
+]; as const; 
+type ToneId = (typeof TONES)[number]["id"];
 
 export default function CreatePage() {
   const [text, setText] = useState("");
-  const [tone, setTone] = useState("professional");
+  const [tone, setTone] = useState<ToneId>("professional");
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,28 +57,43 @@ export default function CreatePage() {
 
       {/* Text Area */}
       <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Hi, you’ve reached..."
-        className="w-full max-w-2xl h-36 p-4 rounded-xl text-black bg-black/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-      />
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  placeholder="Type your voicemail text here…"
+  className="
+    w-full
+    h-40
+    bg-black
+    text-white
+    placeholder-gray-400
+    border border-white/20
+    rounded-xl
+    p-4
+    resize-none
+    focus:outline-none
+    focus:ring-2
+    focus:ring-yellow-400
+  "
+/>
 
       {/* Tone Buttons */}
-      <div className="flex flex-wrap justify-center gap-2 mt-8 max-w-2xl">
-        {TONES.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTone(t.id)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-              tone === t.id
-                ? "bg-yellow-400 text-black"
-                : "bg-white/20 hover:bg-white/30"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-wrap justify-center gap-2 mt-6">
+  {TONES.map((t) => (
+    <button
+      key={t.id}
+      onClick={() => setTone(t.id)}
+      className={`px-3 py-1 rounded-full text-sm font-medium transition
+        ${
+          tone === t.id
+            ? "bg-yellow-400 text-black"
+            : "bg-white/10 text-white hover:bg-white/20"
+        }`}
+    >
+      {t.label}
+    </button>
+  ))}
+</div>
+
 
       {/* Preview Button */}
       <button
@@ -97,11 +113,15 @@ export default function CreatePage() {
 
       {/* Pay Button */}
       <button
-        onClick={goToCheckout}
-        className="mt-10 bg-yellow-400 hover:bg-yellow-300 text-black font-extrabold px-8 py-4 rounded-xl shadow-xl"
-      >
-        Pay & Download Full Audio
-      </button>
+  onClick={async () => {
+    const res = await fetch("/api/checkout", { method: "POST" });
+    const data = await res.json();
+    window.location.href = data.url;
+  }}
+  className="bg-yellow-400 text-black font-bold px-6 py-3 rounded-xl mt-6"
+>
+  Pay & Download Full Audio
+</button>
     </div>
   );
 }
