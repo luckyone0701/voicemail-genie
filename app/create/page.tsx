@@ -3,16 +3,15 @@
 import { useState } from "react";
 
 const TONES = [
-  { id: "professional", label: "📞 Professional" },
-  { id: "business", label: "💼 Business" },
-  { id: "friendly", label: "😊 Friendly" },
+  { id: "normal", label: "🙂 Normal" },
+  { id: "professional", label: "💼 Professional" },
   { id: "funny", label: "😂 Funny" },
-  { id: "serious", label: "😐 Serious" },
-  { id: "angry", label: "😡 Angry" },
   { id: "ghost", label: "👻 Ghost" },
   { id: "robot", label: "🤖 Robot" },
-]; as const; 
+] as const;
+
 type ToneId = (typeof TONES)[number]["id"];
+
 
 export default function CreatePage() {
   const [text, setText] = useState("");
