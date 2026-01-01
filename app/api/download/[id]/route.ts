@@ -2,24 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
 
     if (!id) {
-      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing id" },
+        { status: 400 }
+      );
     }
 
-    // TODO: Replace with your real storage lookup
-    // Example:
-    // const audioUrl = await getAudioUrlFromDB(id);
+    // TODO: Replace with real storage / DB lookup
+    // const audioUrl = await getAudioUrl(id);
 
     return NextResponse.json({
       audioUrl: `/audio/${id}.mp3`,
     });
-  } catch (err) {
-    console.error("Download error:", err);
+  } catch (error) {
+    console.error("Download route error:", error);
     return NextResponse.json(
       { error: "Failed to fetch audio" },
       { status: 500 }
