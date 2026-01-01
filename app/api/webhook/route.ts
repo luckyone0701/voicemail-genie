@@ -48,6 +48,16 @@ export async function POST(req: Request) {
       console.warn("Missing metadata on session", session.id);
       return NextResponse.json({ received: true });
     }
+	
+	if (
+  event.type === "checkout.session.completed" &&
+  session.metadata?.upsell === "premium_pack"
+) {
+  fs.writeFileSync(
+    path.join(process.cwd(), "paid", `${previewId}.premium`),
+    "true"
+  );
+}
 
     /**
      * Generate FULL voicemail (no 15s limit)

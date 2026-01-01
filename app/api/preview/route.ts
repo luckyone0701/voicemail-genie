@@ -1,28 +1,50 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
 export async function POST(req: Request) {
-  if (!process.env.OPENAI_API_KEY) {
-    console.error("Missing OPENAI_API_KEY");
-    return NextResponse.json({ error: "AI not configured" }, { status: 500 });
+  const { text } = await req.json();
+  if (!text || text.length < 5) {
+    return NextResponse.json({ error: "Invalid text" }, { status: 400 });
   }
 
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  const id = crypto.randomUUID();
+  const fullText = text;
+  const previewText = text.slice(0, 300);
 
-  const { text } = await req.json();
-
-  const speech = await openai.audio.speech.create({
+  // FULL AUDIO (LOCKED)
+  const full = await openai.audio.speech.create({
     model: "gpt-4o-mini-tts",
     voice: "alloy",
-    input: text.slice(0, 300),
+    input: fullText,
   });
 
-  const buffer = Buffer.from(await speech.arrayBuffer());
-  const base64 = buffer.toString("base64");
+  const fullBuffer = Buffer.from(await full.arrayBuffer());
+  const audioDir = path.join(process.cwd(), "private_audio");
+  fs.mkdirSync(audioDir, { recursive: true });
+  fs.writeFileSync(path.join(audioDir, `${id}.mp3`), fullBuffer);
+
+  // PREVIEW AUDIO
+  const isPremium =
+  PREMIUM_TONES.includes(tone) || PREMIUM_VOICES.includes(voice);
+
+if (isPremium && !userHasUpsell) {
+  return NextResponse.json(
+    { error: "Premium upgrade required" },
+    { status: 402 }
+  );
+}
+
+  const previewBuffer = Buffer.from(await preview.arrayBuffer());
 
   return NextResponse.json({
-    audio: `data:audio/mp3;base64,${base64}`,
+    previewId: id,
+    previewAudio: `data:audio/mp3;base64,${previewBuffer.toString("base64")}`,
   });
 }

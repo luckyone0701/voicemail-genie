@@ -1,37 +1,30 @@
-import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 
-export async function POST() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.error("Missing STRIPE_SECRET_KEY");
-    return NextResponse.json(
-      { error: "Stripe not configured" },
-      { status: 500 }
-    );
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export async function POST(req: Request) {
+  const sig = req.headers.get("stripe-signature")!;
+  const body = await req.text();
+
+  const event = stripe.webhooks.constructEvent(
+    body,
+    sig,
+    process.env.STRIPE_WEBHOOK_SECRET!
+  );
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const previewId = session.metadata?.previewId;
+
+    if (previewId) {
+      const unlockDir = path.join(process.cwd(), "paid");
+      fs.mkdirSync(unlockDir, { recursive: true });
+      fs.writeFileSync(path.join(unlockDir, `${previewId}.paid`), "true");
+    }
   }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-12-15.clover",
-  });
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "Voicemail Greeting",
-          },
-          unit_amount: 500,
-        },
-        quantity: 1,
-      },
-    ],
-    success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/create?paid=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/`,
-  });
-
-  return NextResponse.json({ url: session.url });
+  return NextResponse.json({ received: true });
 }
