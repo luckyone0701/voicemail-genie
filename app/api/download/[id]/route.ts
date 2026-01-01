@@ -1,27 +1,28 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
-  const paidFile = path.join(process.cwd(), "paid", `${params.id}.paid`);
-  const audioFile = path.join(process.cwd(), "private_audio", `${params.id}.mp3`);
+  try {
+    const { id } = context.params;
 
-  if (!fs.existsSync(paidFile)) {
-    return NextResponse.json({ error: "Not paid" }, { status: 403 });
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+
+    // TODO: Replace with your real storage lookup
+    // Example:
+    // const audioUrl = await getAudioUrlFromDB(id);
+
+    return NextResponse.json({
+      audioUrl: `/audio/${id}.mp3`,
+    });
+  } catch (err) {
+    console.error("Download error:", err);
+    return NextResponse.json(
+      { error: "Failed to fetch audio" },
+      { status: 500 }
+    );
   }
-
-  if (!fs.existsSync(audioFile)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  const audio = fs.readFileSync(audioFile);
-  return new NextResponse(audio, {
-    headers: {
-      "Content-Type": "audio/mpeg",
-      "Content-Disposition": "attachment; filename=voicemail.mp3",
-    },
-  });
 }
