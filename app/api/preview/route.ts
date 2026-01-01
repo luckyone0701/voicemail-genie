@@ -4,6 +4,21 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
+const PREMIUM_TONES = [
+  "radio",
+  "cinematic",
+  "dramatic",
+  "ghost",
+  "robot",
+];
+
+const PREMIUM_VOICES = [
+  "celebrity",
+  "narrator_pro",
+  "deep_radio",
+];
+
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
