@@ -1,77 +1,67 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 const TONES = [
-  { id: "friendly", label: "😊 Friendly" },
-  { id: "professional", label: "💼 Professional" },
-  { id: "funny", label: "😂 Funny" },
-  { id: "ghost", label: "👻 Ghost" },
-  { id: "robot", label: "🤖 Robot" },
+  { id: "professional", label: "💼 Professional", premium: false },
+  { id: "friendly", label: "😊 Friendly", premium: false },
+  { id: "funny", label: "😂 Funny", premium: false },
+  { id: "serious", label: "🧠 Serious", premium: false },
+  { id: "ghost", label: "👻 Ghost", premium: true },
+  { id: "robot", label: "🤖 Robot", premium: true },
 ] as const;
 
 type ToneId = (typeof TONES)[number]["id"];
+type Voice = "female" | "male";
 
 export default function CreatePage() {
-  const [text, setText] = useState("");
-  const [tone, setTone] = useState<ToneId>("friendly");
+  const [text, setText] = useState(
+    "I'm away from my desk but will return your call within 24 hours. Please leave your name, number, and message. Thank you!"
+  );
+  const [tone, setTone] = useState<ToneId>("professional");
+  const [voice, setVoice] = useState<Voice>("female");
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   async function generatePreview() {
     setLoading(true);
-    setError(null);
+    setAudioSrc(null);
 
     try {
       const res = await fetch("/api/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, tone }),
+        body: JSON.stringify({ text, tone, voice }),
       });
-
-      if (!res.ok) {
-        const e = await res.json();
-        throw new Error(e.error || "Preview failed");
-      }
 
       const data = await res.json();
 
-      if (!data.audio) {
-        throw new Error("No audio returned");
+      if (data.audio) {
+        setAudioSrc(data.audio);
+      } else {
+        alert("Preview failed.");
       }
-
-      // ✅ PLAY AUDIO
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-      }
-
-      audioRef.current.src = data.audio;
-      audioRef.current.load();
-      await audioRef.current.play();
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Something went wrong");
+    } catch (e) {
+      alert("Error generating preview");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-indigo-700 text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl space-y-6">
-        <h1 className="text-4xl font-extrabold text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-indigo-600 to-indigo-800 px-4">
+      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl p-6 space-y-6">
+
+        {/* Title */}
+        <h1 className="text-3xl font-bold text-center">
           Create Your Voicemail
         </h1>
 
-        {/* TEXT INPUT */}
+        {/* TEXTAREA */}
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Type what you want your voicemail to say…"
-          className="w-full h-40 p-4 rounded-xl text-black text-lg"
+          className="w-full h-32 rounded-lg bg-black text-white p-4 resize-none outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
         {/* TONES */}
@@ -79,33 +69,80 @@ export default function CreatePage() {
           {TONES.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTone(t.id)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                tone === t.id
-                  ? "bg-yellow-400 text-black"
-                  : "bg-white/20"
-              }`}
+              onClick={() => {
+                if (t.premium) {
+                  alert("Premium tone — unlock after payment");
+                  return;
+                }
+                setTone(t.id);
+              }}
+              className={`px-4 py-2 rounded-full text-sm font-medium border
+                ${
+                  tone === t.id
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-black border-gray-300"
+                }
+                ${t.premium ? "opacity-60 cursor-not-allowed" : ""}
+              `}
             >
-              {t.label}
+              {t.label} {t.premium && "🔒"}
             </button>
           ))}
         </div>
 
-        {/* ACTION */}
-        <Button
-          onClick={generatePreview}
-          disabled={loading || text.trim().length < 5}
-          className="w-full bg-yellow-400 text-black font-bold text-lg py-4 rounded-xl"
-        >
-          {loading ? "Generating Preview…" : "Generate Preview"}
-        </Button>
+        {/* VOICE SELECTOR */}
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => setVoice("female")}
+            className={`px-4 py-2 rounded-full border ${
+              voice === "female"
+                ? "bg-yellow-400 text-black"
+                : "bg-white"
+            }`}
+          >
+            Female Voice
+          </button>
+          <button
+            onClick={() => setVoice("male")}
+            className={`px-4 py-2 rounded-full border ${
+              voice === "male"
+                ? "bg-yellow-400 text-black"
+                : "bg-white"
+            }`}
+          >
+            Male Voice
+          </button>
+        </div>
 
-        {error && (
-          <p className="text-red-300 text-center font-medium">{error}</p>
+        {/* PREVIEW BUTTON */}
+        <button
+          onClick={generatePreview}
+          disabled={loading}
+          className="w-full py-3 rounded-xl bg-black text-white font-semibold hover:opacity-90"
+        >
+          {loading ? "Generating..." : "Generate Preview"}
+        </button>
+
+        {/* AUDIO PLAYER */}
+        {audioSrc && (
+          <audio
+            controls
+            autoPlay
+            src={audioSrc}
+            className="w-full mt-2"
+          />
         )}
 
-        <p className="text-center text-sm opacity-80">
-          Preview is limited. Unlock full-length audio after payment.
+        {/* PAY BUTTON (SAFE — NO 404) */}
+        <button
+          onClick={() => alert("Checkout will be enabled next")}
+          className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700"
+        >
+          Pay $5 to Download Full Audio
+        </button>
+
+        <p className="text-xs text-center text-gray-500">
+          Preview is limited. Full-length audio unlocks after payment.
         </p>
       </div>
     </div>
