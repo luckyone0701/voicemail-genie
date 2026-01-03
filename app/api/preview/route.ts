@@ -10,9 +10,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/**
- * Allowed tone keys
- */
 type Tone =
   | "neutral"
   | "professional"
@@ -22,9 +19,6 @@ type Tone =
   | "ghost"
   | "robot";
 
-/**
- * Tone → style prompt mapping (STRICTLY TYPED)
- */
 const STYLE_PROMPTS: Record<Tone, string> = {
   neutral: "Speak clearly and naturally.",
   professional: "Sound professional, confident, and polished.",
@@ -51,23 +45,19 @@ export async function POST(req: NextRequest) {
     }
 
     const stylePrompt = STYLE_PROMPTS[tone];
-
     const previewText =
       text.length > 220 ? text.slice(0, 220) + "…" : text;
 
-    // ---- Generate audio via OpenAI ----
-    const audioResponse = await openai.audio.speech.create({
+    const response = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
       voice: voice === "male" ? "alloy" : "nova",
       input: `${stylePrompt}\n\n${previewText}`,
-      format: "mp3",
     });
 
-    const buffer = Buffer.from(await audioResponse.arrayBuffer());
+    const buffer = Buffer.from(await response.arrayBuffer());
 
     const id = crypto.randomUUID();
     const previewsDir = path.join(process.cwd(), "public", "previews");
-
     fs.mkdirSync(previewsDir, { recursive: true });
 
     const filePath = path.join(previewsDir, `${id}.mp3`);
