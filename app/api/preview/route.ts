@@ -1,65 +1,86 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+
+export const runtime = "nodejs";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/* ------------------ TONE DEFINITIONS ------------------ */
+/**
+ * Allowed tone keys
+ */
+type Tone =
+  | "neutral"
+  | "professional"
+  | "friendly"
+  | "funny"
+  | "serious"
+  | "ghost"
+  | "robot";
 
-const STYLE_PROMPTS = {
+/**
+ * Tone → style prompt mapping (STRICTLY TYPED)
+ */
+const STYLE_PROMPTS: Record<Tone, string> = {
   neutral: "Speak clearly and naturally.",
   professional: "Sound professional, confident, and polished.",
+  friendly: "Sound warm, friendly, and welcoming.",
   funny: "Sound playful, upbeat, and humorous.",
-  dramatic: "Use dramatic pacing and emotional emphasis.",
-  serious: "Sound calm, serious, and authoritative.",
+  serious: "Sound calm, serious, and composed.",
   ghost: "Sound spooky, whispery, and mysterious.",
   robot: "Sound robotic, synthetic, and mechanical.",
-} as const;
+};
 
-type ToneId = keyof typeof STYLE_PROMPTS;
-
-const PREMIUM_TONES: ToneId[] = ["ghost", "robot"];
-
-/* ------------------ ROUTE ------------------ */
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const text: string = body.text ?? "";
-    const toneRaw: string = body.tone ?? "neutral";
-    const voice: string = body.voice ?? "alloy";
+    const text: string = body.text;
+    const tone: Tone = body.tone ?? "neutral";
+    const voice: "male" | "female" = body.voice ?? "female";
 
-    // ✅ Validate tone safely
-    const tone: ToneId =
-      toneRaw in STYLE_PROMPTS ? (toneRaw as ToneId) : "neutral";
-
-    const isPremium = PREMIUM_TONES.includes(tone);
-
-    // Optional: lock premium preview later
-    // if (isPremium && !userHasPaid) { ... }
+    if (!text || text.trim().length < 5) {
+      return NextResponse.json(
+        { error: "Text is required" },
+        { status: 400 }
+      );
+    }
 
     const stylePrompt = STYLE_PROMPTS[tone];
 
-    const response = await openai.audio.speech.create({
+    const previewText =
+      text.length > 220 ? text.slice(0, 220) + "…" : text;
+
+    // ---- Generate audio via OpenAI ----
+    const audioResponse = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice,
-      input: `${stylePrompt}\n\n${text}`,
+      voice: voice === "male" ? "alloy" : "nova",
+      input: `${stylePrompt}\n\n${previewText}`,
+      format: "mp3",
     });
 
-    const audioBuffer = Buffer.from(await response.arrayBuffer());
+    const buffer = Buffer.from(await audioResponse.arrayBuffer());
 
-    return new Response(audioBuffer, {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.length.toString(),
-      },
+    const id = crypto.randomUUID();
+    const previewsDir = path.join(process.cwd(), "public", "previews");
+
+    fs.mkdirSync(previewsDir, { recursive: true });
+
+    const filePath = path.join(previewsDir, `${id}.mp3`);
+    fs.writeFileSync(filePath, buffer);
+
+    return NextResponse.json({
+      id,
+      audioUrl: `/previews/${id}.mp3`,
     });
   } catch (err) {
-    console.error("PREVIEW ERROR:", err);
+    console.error("Preview generation failed:", err);
     return NextResponse.json(
-      { error: "Failed to generate preview" },
+      { error: "Preview failed" },
       { status: 500 }
     );
   }
