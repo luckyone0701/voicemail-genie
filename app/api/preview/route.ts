@@ -1,54 +1,96 @@
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
-
-export const runtime = "nodejs";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
+const TONE_PROMPTS: Record<string, string> = {
+  neutral: `
+You are a neutral voicemail narrator.
+Speak clearly, evenly, and naturally.
+No exaggerated emotion.
+`,
+
+  professional: `
+You are a professional business voicemail voice.
+Speak confidently.
+Moderate pace.
+Clear articulation.
+Friendly but formal tone.
+`,
+
+  friendly: `
+You are a warm and friendly voicemail voice.
+Smile while speaking.
+Slightly upbeat rhythm.
+Welcoming and personable.
+`,
+
+  funny: `
+You are a playful, lighthearted voicemail voice.
+Add subtle humor in delivery.
+Vary pitch slightly.
+Energetic and fun pacing.
+`,
+
+  serious: `
+You are a serious and authoritative voicemail voice.
+Lower pitch.
+Slower pace.
+Firm and calm delivery.
+`,
+
+  ghost: `
+You are a spooky ghost voicemail voice.
+Slow, airy delivery.
+Slight pauses between phrases.
+Soft and haunting tone.
+`,
+
+  robot: `
+You are a robotic synthetic voice.
+Flat intonation.
+Even pacing.
+Minimal emotion.
+Mechanical delivery.
+`,
+};
+
 export async function POST(req: Request) {
   try {
     const { text, tone = "neutral", voice = "female" } = await req.json();
 
-    if (!text || !text.trim()) {
-      return new Response(
-        JSON.stringify({ error: "Text is required" }),
-        { status: 400 }
-      );
+    if (!text || text.trim().length === 0) {
+      return NextResponse.json({ error: "Text required" }, { status: 400 });
     }
-
-    const TONE_PROMPTS: Record<string, string> = {
-      neutral: "Speak clearly and naturally.",
-      professional: "Sound professional, confident, and polished.",
-      friendly: "Sound warm, friendly, and welcoming.",
-      funny: "Sound playful, upbeat, and humorous.",
-      serious: "Sound calm, serious, and authoritative.",
-      ghost: "Sound spooky, slow, and mysterious like a ghost.",
-      robot: "Sound robotic, mechanical, and synthetic.",
-    };
 
     const style = TONE_PROMPTS[tone] ?? TONE_PROMPTS.neutral;
 
-    const response = await openai.audio.speech.create({
+    const speechInput = `
+${style}
+
+Read the following voicemail message exactly as written:
+
+"${text}"
+`;
+
+    const speech = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
       voice: voice === "male" ? "alloy" : "nova",
-      input: `${style}\n\n${text}`,
+      input: speechInput,
     });
 
-    const audioBuffer = Buffer.from(await response.arrayBuffer());
+    const buffer = Buffer.from(await speech.arrayBuffer());
 
-    return new Response(audioBuffer, {
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type": "audio/webm",
-        "Content-Length": audioBuffer.length.toString(),
+        "Content-Type": "audio/mpeg",
       },
     });
   } catch (err) {
     console.error("Preview TTS error:", err);
-    return new Response(
-      JSON.stringify({ error: "Preview failed" }),
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Preview failed" }, { status: 500 });
   }
 }
