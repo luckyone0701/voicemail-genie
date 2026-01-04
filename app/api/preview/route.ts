@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
 import OpenAI from "openai";
+
+export const runtime = "nodejs";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -7,14 +8,11 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const text: string = body.text;
-    const tone: string = body.tone || "neutral";
-    const voice: "male" | "female" = body.voice || "female";
+    const { text, tone = "neutral", voice = "female" } = await req.json();
 
-    if (!text || text.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Text is required" },
+    if (!text || !text.trim()) {
+      return new Response(
+        JSON.stringify({ error: "Text is required" }),
         { status: 400 }
       );
     }
@@ -30,27 +28,26 @@ export async function POST(req: Request) {
     };
 
     const style = TONE_PROMPTS[tone] ?? TONE_PROMPTS.neutral;
-    const prompt = `${style}\n\n${text}`;
 
-    const speech = await openai.audio.speech.create({
+    const response = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
       voice: voice === "male" ? "alloy" : "nova",
-      input: prompt,
+      input: `${style}\n\n${text}`,
     });
 
-    const buffer = Buffer.from(await speech.arrayBuffer());
+    const audioBuffer = Buffer.from(await response.arrayBuffer());
 
-    return new NextResponse(buffer, {
+    return new Response(audioBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Length": buffer.length.toString(),
+        "Content-Type": "audio/webm",
+        "Content-Length": audioBuffer.length.toString(),
       },
     });
   } catch (err) {
     console.error("Preview TTS error:", err);
-    return NextResponse.json(
-      { error: "Preview failed" },
+    return new Response(
+      JSON.stringify({ error: "Preview failed" }),
       { status: 500 }
     );
   }
