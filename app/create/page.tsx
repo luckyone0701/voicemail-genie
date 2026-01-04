@@ -28,6 +28,7 @@ export default function CreatePage() {
     }
 
     setLoading(true);
+
     try {
       const res = await fetch("/api/preview", {
         method: "POST",
@@ -38,19 +39,26 @@ export default function CreatePage() {
       if (!res.ok) throw new Error("Preview failed");
 
       const blob = await res.blob();
-const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
 
-// Remove any previous preview
-const existing = document.getElementById("preview-audio");
-if (existing) existing.remove();
+      // Remove old preview
+      const existing = document.getElementById("preview-audio");
+      if (existing) existing.remove();
 
-const audio = document.createElement("audio");
-audio.id = "preview-audio";
-audio.src = url;
-audio.controls = true;
-audio.autoplay = true;
+      const audio = document.createElement("audio");
+      audio.id = "preview-audio";
+      audio.src = url;
+      audio.controls = true;
+      audio.autoplay = true;
 
-document.body.appendChild(audio);
+      document.body.appendChild(audio);
+    } catch (err) {
+      console.error("Preview error:", err);
+      alert("Preview failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-600 to-indigo-800 flex items-center justify-center p-6 text-white">
