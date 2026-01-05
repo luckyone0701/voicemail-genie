@@ -1,96 +1,67 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-const TONE_PROMPTS: Record<string, string> = {
-  neutral: `
-You are a neutral voicemail narrator.
-Speak clearly, evenly, and naturally.
-No exaggerated emotion.
-`,
-
-  professional: `
-You are a professional business voicemail voice.
-Speak confidently.
-Moderate pace.
-Clear articulation.
-Friendly but formal tone.
-`,
-
-  friendly: `
-You are a warm and friendly voicemail voice.
-Smile while speaking.
-Slightly upbeat rhythm.
-Welcoming and personable.
-`,
-
-  funny: `
-You are a playful, lighthearted voicemail voice.
-Add subtle humor in delivery.
-Vary pitch slightly.
-Energetic and fun pacing.
-`,
-
-  serious: `
-You are a serious and authoritative voicemail voice.
-Lower pitch.
-Slower pace.
-Firm and calm delivery.
-`,
-
-  ghost: `
-You are a spooky ghost voicemail voice.
-Slow, airy delivery.
-Slight pauses between phrases.
-Soft and haunting tone.
-`,
-
-  robot: `
-You are a robotic synthetic voice.
-Flat intonation.
-Even pacing.
-Minimal emotion.
-Mechanical delivery.
-`,
-};
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { text, tone = "neutral", voice = "female" } = await req.json();
+    const { text, tone, voice } = await req.json();
 
-    if (!text || text.trim().length === 0) {
-      return NextResponse.json({ error: "Text required" }, { status: 400 });
+    if (!text) {
+      return new NextResponse("Missing text", { status: 400 });
     }
 
-    const style = TONE_PROMPTS[tone] ?? TONE_PROMPTS.neutral;
-
-    const speechInput = `
-${style}
-
-Read the following voicemail message exactly as written:
-
-"${text}"
-`;
-
-    const speech = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice: voice === "male" ? "alloy" : "nova",
-      input: speechInput,
+    /* -------------------------------
+       STEP 1: Generate the SCRIPT ONLY
+    -------------------------------- */
+    const scriptResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
+You write voicemail greeting scripts.
+Apply the requested tone.
+Return ONLY the final script.
+DO NOT include explanations, rules, or labels.
+`,
+        },
+        {
+          role: "user",
+          content: `Tone: ${tone}\nVoicemail content:\n${text}`,
+        },
+      ],
+      temperature: 0.9,
     });
 
-    const buffer = Buffer.from(await speech.arrayBuffer());
+    const script =
+      scriptResponse.choices[0]?.message?.content?.trim();
 
-    return new NextResponse(buffer, {
-      status: 200,
+    if (!script) {
+      return new NextResponse("Failed to generate script", { status: 500 });
+    }
+
+    /* -------------------------------
+       STEP 2: Convert SCRIPT → AUDIO
+    -------------------------------- */
+    const speech = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: voice === "male" ? "alloy" : "verse",
+      input: script, // 🚨 ONLY the script goes here
+    });
+
+    const audioBuffer = Buffer.from(await speech.arrayBuffer());
+
+    return new NextResponse(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
+        "Content-Length": audioBuffer.length.toString(),
       },
     });
   } catch (err) {
-    console.error("Preview TTS error:", err);
-    return NextResponse.json({ error: "Preview failed" }, { status: 500 });
+    console.error("Preview error:", err);
+    return new NextResponse("Preview generation failed", { status: 500 });
   }
 }
