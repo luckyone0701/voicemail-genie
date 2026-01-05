@@ -20,25 +20,31 @@ function applyTone(text: string, tone: ToneId, voice: Voice) {
   let t = text.trim();
 
   switch (tone) {
-    case "friendly":
-      t = `Hey there! 😊 ${t}`;
-      break;
-    case "funny":
-      t = `Haha! 😂 ${t} Thanks for calling!`;
-      break;
-    case "serious":
-      t = `Please listen carefully. ${t}`;
-      break;
-    case "ghost":
-      t = `Ooooo… 👻 ${t} …leave a message if you dare.`;
-      break;
-    case "robot":
-      t = `Beep. Boop. 🤖 ${t}. End transmission.`;
-      break;
-    case "professional":
-    default:
-      t = t;
-  }
+  case "friendly":
+    t = `Hey there! Thanks so much for calling 😊 ${t} Talk soon!`;
+    break;
+
+  case "funny":
+    t = `Well hello there 😂 You caught me away from the phone. ${t} Leave a message and I promise I’ll laugh later.`;
+    break;
+
+  case "serious":
+    t = `You have reached this number. ${t} Please leave your message after the tone.`;
+    break;
+
+  case "ghost":
+    t = `Oooooooo… 👻 You have reached the other side… ${t} Speak… if you dare.`;
+    break;
+
+  case "robot":
+    t = `Greetings, human. 🤖 ${t}. Please leave your message after the beep. Processing.`;
+    break;
+
+  case "professional":
+  default:
+    t = `Hello. ${t} Thank you for calling.`;
+}
+
 
   // Subtle voice shaping
   if (voice === "male") {
