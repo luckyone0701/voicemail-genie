@@ -30,18 +30,33 @@ export default function CreatePage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/preview", {
+      // 1️⃣ Generate tone-based script
+      const scriptRes = await fetch("/api/generate-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, tone, voice }),
+        body: JSON.stringify({ text, tone }),
       });
 
-      if (!res.ok) throw new Error("Preview failed");
+      if (!scriptRes.ok) throw new Error("Script generation failed");
 
-      const blob = await res.blob();
+      const { script } = await scriptRes.json();
+
+      // 2️⃣ Generate TTS preview from rewritten script
+      const audioRes = await fetch("/api/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: script,
+          voice,
+        }),
+      });
+
+      if (!audioRes.ok) throw new Error("Audio preview failed");
+
+      const blob = await audioRes.blob();
       const url = URL.createObjectURL(blob);
 
-      // Remove old preview
+      // Remove previous audio
       const existing = document.getElementById("preview-audio");
       if (existing) existing.remove();
 
@@ -53,7 +68,7 @@ export default function CreatePage() {
 
       document.body.appendChild(audio);
     } catch (err) {
-      console.error("Preview error:", err);
+      console.error(err);
       alert("Preview failed");
     } finally {
       setLoading(false);
@@ -65,6 +80,7 @@ export default function CreatePage() {
       <div className="w-full max-w-xl space-y-6 text-center">
         <h1 className="text-4xl font-extrabold">Create Your Voicemail</h1>
 
+        {/* Text input */}
         <textarea
           className="w-full rounded-lg p-4 bg-black text-white border border-white/20"
           rows={4}
