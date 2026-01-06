@@ -129,17 +129,35 @@ export default function CreatePage() {
         </button>
 
         {/* Pay */}
-        <button
-          onClick={async () => {
-            const res = await fetch("/api/checkout", { method: "POST" });
-            const data = await res.json();
-            window.location.href = data.url;
-          }}
-          className="w-full bg-yellow-400 hover:bg-yellow-300 text-black text-lg py-4 rounded-xl font-bold"
-        >
-          Pay $5 & Unlock Premium Voices
-        </button>
-		<button
+        <Button
+  onClick={async () => {
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+
+      if (!res.ok) {
+        const t = await res.text();
+        console.error("Checkout failed:", t);
+        alert("Payment could not start. Please try again.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!data?.url) {
+        throw new Error("No checkout URL returned");
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert("Stripe checkout error. Check logs.");
+    }
+  }}
+  className="w-full bg-yellow-400 text-black text-lg py-4 rounded-xl font-bold"
+>
+  Pay $5 & Unlock Premium Voices
+</Button>
+
   onClick={async () => {
     try {
       const res = await fetch("/api/checkout", { method: "POST" });
