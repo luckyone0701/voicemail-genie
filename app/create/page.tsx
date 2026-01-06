@@ -139,6 +139,16 @@ export default function CreatePage() {
         >
           Pay $5 & Unlock Premium Voices
         </button>
+		<button
+  onClick={async () => {
+    const res = await fetch("/api/checkout/upsell", { method: "POST" });
+    const data = await res.json();
+    window.location.href = data.url;
+  }}
+  className="w-full border border-yellow-400 text-yellow-400 py-3 rounded-xl font-semibold"
+>
+  Unlock Male + Ghost + Robot Voices — $2
+</button>
       </div>
     </div>
   );
