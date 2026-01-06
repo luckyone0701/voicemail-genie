@@ -155,16 +155,18 @@ export default function CreatePage() {
   }}
   className="w-full bg-yellow-400 text-black text-lg py-4 rounded-xl font-bold"
 >
-  Pay $5 & Unlock Premium Voices
-</Button>
-
+  
+<button
   onClick={async () => {
     try {
       const res = await fetch("/api/checkout", { method: "POST" });
+      if (!res.ok) throw new Error("Checkout failed");
       const data = await res.json();
+      if (!data?.url) throw new Error("No checkout URL returned");
       window.location.href = data.url;
-    } catch (e) {
-      alert("Checkout failed");
+    } catch (err) {
+      console.error(err);
+      alert("Payment failed. Please try again.");
     }
   }}
   className="w-full bg-yellow-400 text-black text-lg py-4 rounded-xl font-bold"
