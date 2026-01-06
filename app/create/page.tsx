@@ -1,60 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const TONES = [
-  { id: "professional", label: "📞 Professional" },
-  { id: "friendly", label: "😊 Friendly" },
-  { id: "funny", label: "😂 Funny" },
-  { id: "serious", label: "🧠 Serious" },
-  { id: "ghost", label: "👻 Ghost" },
-  { id: "robot", label: "🤖 Robot" },
+  { id: "professional", label: "📞 Professional", premium: false },
+  { id: "friendly", label: "😊 Friendly", premium: false },
+  { id: "funny", label: "😂 Funny", premium: false },
+  { id: "serious", label: "🧠 Serious", premium: false },
+  { id: "ghost", label: "👻 Ghost", premium: true },
+  { id: "robot", label: "🤖 Robot", premium: true },
 ] as const;
 
 type ToneId = (typeof TONES)[number]["id"];
 type Voice = "female" | "male";
-
-/* ---- Text transformation (THIS is the key) ---- */
-function applyTone(text: string, tone: ToneId, voice: Voice) {
-  let t = text.trim();
-
-  switch (tone) {
-  case "friendly":
-    t = `Hey there! Thanks so much for calling 😊 ${t} Talk soon!`;
-    break;
-
-  case "funny":
-    t = `Well hello there 😂 You caught me away from the phone. ${t} Leave a message and I promise I’ll laugh later.`;
-    break;
-
-  case "serious":
-    t = `You have reached this number. ${t} Please leave your message after the tone.`;
-    break;
-
-  case "ghost":
-    t = `Oooooooo… 👻 You have reached the other side… ${t} Speak… if you dare.`;
-    break;
-
-  case "robot":
-    t = `Greetings, human. 🤖 ${t}. Please leave your message after the beep. Processing.`;
-    break;
-
-  case "professional":
-  default:
-    t = `Hello. ${t} Thank you for calling.`;
-}
-
-
-  // Subtle voice shaping
-  if (voice === "male") {
-    t = t.replace(/^Hi\b/i, "Hello");
-  } else {
-    t = t.replace(/^Hello\b/i, "Hi");
-  }
-
-  return t;
-}
 
 export default function CreatePage() {
   const [text, setText] = useState("");
@@ -69,35 +27,35 @@ export default function CreatePage() {
     }
 
     setLoading(true);
-    try {
-      const transformedText = applyTone(text, tone, voice);
 
+    try {
       const res = await fetch("/api/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: transformedText,
-          voice, // tone already baked into text
-        }),
+        body: JSON.stringify({ text, tone, voice }),
       });
+
+      if (res.status === 402) {
+        alert("This voice or tone is unlocked after payment.");
+        return;
+      }
 
       if (!res.ok) throw new Error("Preview failed");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
 
-      let audio = document.getElementById("preview-audio") as HTMLAudioElement | null;
-      if (!audio) {
-        audio = document.createElement("audio");
-        audio.id = "preview-audio";
-        audio.controls = true;
-        document.body.appendChild(audio);
-      }
+      const existing = document.getElementById("preview-audio");
+      if (existing) existing.remove();
 
+      const audio = document.createElement("audio");
+      audio.id = "preview-audio";
       audio.src = url;
-      audio.play();
+      audio.controls = true;
+      audio.autoplay = true;
+
+      document.body.appendChild(audio);
     } catch (err) {
-      console.error(err);
       alert("Preview failed");
     } finally {
       setLoading(false);
@@ -107,8 +65,10 @@ export default function CreatePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-600 to-indigo-800 flex items-center justify-center p-6 text-white">
       <div className="w-full max-w-xl space-y-6 text-center">
+
         <h1 className="text-4xl font-extrabold">Create Your Voicemail</h1>
 
+        {/* Text input */}
         <textarea
           className="w-full rounded-lg p-4 bg-black text-white border border-white/20"
           rows={4}
@@ -120,56 +80,65 @@ export default function CreatePage() {
         {/* Tone selector */}
         <div className="flex flex-wrap justify-center gap-2">
           {TONES.map((t) => (
-            <Button
+            <button
               key={t.id}
+              disabled={t.premium}
               onClick={() => setTone(t.id)}
-              className={
-                tone === t.id
-                  ? "bg-yellow-400 text-black"
-                  : "bg-white/10 text-white"
-              }
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition
+                ${
+                  t.premium
+                    ? "opacity-40 cursor-not-allowed border border-white/20"
+                    : tone === t.id
+                    ? "bg-yellow-400 text-black"
+                    : "bg-white/10 text-white"
+                }`}
             >
-              {t.label}
-            </Button>
+              {t.label} {t.premium && "🔒"}
+            </button>
           ))}
         </div>
 
         {/* Voice selector */}
         <div className="flex justify-center gap-4">
-          <Button
+          <button
             onClick={() => setVoice("female")}
-            className={voice === "female" ? "bg-yellow-400 text-black" : ""}
+            className={`px-6 py-2 rounded-lg font-semibold ${
+              voice === "female"
+                ? "bg-yellow-400 text-black"
+                : "bg-white/10"
+            }`}
           >
             👩 Female
-          </Button>
-          <Button
-            onClick={() => setVoice("male")}
-            className={voice === "male" ? "bg-yellow-400 text-black" : ""}
+          </button>
+
+          <button
+            disabled
+            className="px-6 py-2 rounded-lg font-semibold opacity-40 cursor-not-allowed bg-white/10"
           >
-            👨 Male
-          </Button>
+            👨 Male 🔒
+          </button>
         </div>
 
         {/* Preview */}
-        <Button
+        <button
           onClick={generatePreview}
           disabled={loading}
-          className="w-full bg-indigo-600 text-white text-lg py-4 rounded-xl"
+          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-lg py-4 rounded-xl font-semibold"
         >
           {loading ? "Generating…" : "▶ Generate Preview (Free)"}
-        </Button>
+        </button>
 
         {/* Pay */}
-        <Button
+        <button
           onClick={async () => {
             const res = await fetch("/api/checkout", { method: "POST" });
             const data = await res.json();
             window.location.href = data.url;
           }}
-          className="w-full bg-yellow-400 text-black text-lg py-4 rounded-xl font-bold"
+          className="w-full bg-yellow-400 hover:bg-yellow-300 text-black text-lg py-4 rounded-xl font-bold"
         >
-          Pay $5 & Unlock Full Audio
-        </Button>
+          Pay $5 & Unlock Premium Voices
+        </button>
       </div>
     </div>
   );
