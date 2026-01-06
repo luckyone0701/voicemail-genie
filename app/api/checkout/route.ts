@@ -1,3 +1,4 @@
+// app/api/checkout/route.ts
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
@@ -12,21 +13,26 @@ export async function POST() {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: process.env.STRIPE_BASE_PRICE_ID!,
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Voicemail Genie – Full Audio Unlock",
+            },
+            unit_amount: 500, // $5
+          },
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/create?paid=1`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/create`,
-      metadata: {
-        type: "base",
-        previewId: "default",
-      },
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/create?paid=1`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/create`,
     });
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("Checkout error:", err);
-    return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
+    console.error("Stripe checkout error:", err);
+    return NextResponse.json(
+      { error: "Checkout failed" },
+      { status: 500 }
+    );
   }
 }
