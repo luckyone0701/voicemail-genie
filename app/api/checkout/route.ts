@@ -1,9 +1,8 @@
-// app/api/checkout/route.ts
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-12-15.clover",
+  apiVersion: "2024-06-20",
 });
 
 export async function POST() {
@@ -16,15 +15,16 @@ export async function POST() {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "Voicemail Genie – Full Audio Unlock",
+              name: "Voicemail Genie – Premium Voices",
+              description: "Unlock male, ghost, and robot voices",
             },
             unit_amount: 500, // $5
           },
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/create?paid=1`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/create`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/create?success=1`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/create`,
     });
 
     return NextResponse.json({ url: session.url });
