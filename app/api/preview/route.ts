@@ -48,7 +48,7 @@ DO NOT include explanations, rules, or labels.
     -------------------------------- */
     const speech = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice: voice === "male" ? "alloy" : "verse",
+      voice: voice === "male" ? "verse" : "nova",
       input: script, // 🚨 ONLY the script goes here
     });
 
