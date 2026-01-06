@@ -139,25 +139,20 @@ export default function CreatePage() {
         >
           Pay $5 & Unlock Premium Voices
         </button>
-		<Button
+		<button
   onClick={async () => {
     try {
       const res = await fetch("/api/checkout", { method: "POST" });
       const data = await res.json();
-
-      if (!data.url) {
-        alert("Payment initialization failed.");
-        return;
-      }
-
       window.location.href = data.url;
-    } catch (err) {
-      alert("Payment error. Please try again.");
+    } catch (e) {
+      alert("Checkout failed");
     }
   }}
+  className="w-full bg-yellow-400 text-black text-lg py-4 rounded-xl font-bold"
 >
-  Pay $5 & Continue
-</Button>
+  Pay $5 & Unlock Premium Voices
+</button>
       </div>
     </div>
   );
