@@ -5,23 +5,26 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/**
- * IMPORTANT:
- * OpenAI TTS does NOT follow "instructions".
- * Tone MUST be embedded into the spoken text itself.
- */
 function applyTone(text: string, tone: string) {
   switch (tone) {
     case "funny":
-      return `Hey there! 😄 You’ve reached my voicemail. I can’t answer right now, but leave a message and I’ll get back to you!`;
+      return `Hey there! 😄 You’ve reached my voicemail. I can’t grab the phone right now, but leave a message and I promise I’ll get back to you!`;
+
     case "professional":
-      return `Hello. You’ve reached my voicemail. I’m currently unavailable. Please leave your name and message.`;
+      return `Hello. You have reached my voicemail. I am currently unavailable. Please leave your name, number, and message, and I will return your call.`;
+
     case "serious":
-      return `You have reached my voicemail. Leave your name and message after the tone.`;
+      return `You have reached my voicemail. Please leave your name and message after the tone.`;
+
     case "ghost":
-      return `Oooo… you have reached the voicemail from beyond the grave… leave your message… if you dare…`;
+      return `Oooo… you have reached the voicemail… leave your message… if you dare…`;
+
     case "robot":
       return `You have reached voicemail unit seven. Please state your message clearly after the tone.`;
+
+    case "friendly":
+      return `Hi there! You’ve reached my voicemail. I’m away right now, but leave me a message and I’ll get back to you soon!`;
+
     default:
       return text;
   }
@@ -35,15 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text required" }, { status: 400 });
     }
 
-    /**
-     * Reinforce gender — OpenAI voices are subtle without this
-     */
-    const genderLead =
-      voice === "male"
-        ? "This is a calm, confident male voice speaking."
-        : "This is a warm, friendly female voice speaking.";
-
-    const spokenText = `${genderLead} ${applyTone(text, tone)}`;
+    const spokenText = applyTone(text, tone);
 
     const speech = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
@@ -62,9 +57,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Preview TTS error:", error);
-    return NextResponse.json(
-      { error: "Preview failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Preview failed" }, { status: 500 });
   }
 }
